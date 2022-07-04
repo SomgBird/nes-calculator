@@ -32,3 +32,4 @@ pdata:
     .word main
 
 .segment "TILES"
+    .incbin "tiles.chr"
