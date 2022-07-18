@@ -1,9 +1,20 @@
 .include "const.inc"
 .include "ines-header.s"
+JOYPAD1 = $4016
+
+BUTTON_A      = 1 << 7
+BUTTON_B      = 1 << 6
+BUTTON_SELECT = 1 << 5
+BUTTON_START  = 1 << 4
+BUTTON_UP     = 1 << 3
+BUTTON_DOWN   = 1 << 2
+BUTTON_LEFT   = 1 << 1
+BUTTON_RIGHT  = 1 << 0
 
 .segment "ZEROPAGE"
 addrL:  .res 1
 addrH:  .res 1
+buttons: .res 1
 
 .segment "CODE"
 .include "reset.s"
@@ -77,12 +88,47 @@ load_nametable:
     sta PPU_SCROLL
 
 loop:
+    ; TEST INPUT
+reread:
+    lda buttons
+    pha
+    jsr readjoy
+    pla
+    cmp buttons
+    bne reread
+
+    lda buttons
+    and #BUTTON_RIGHT
+    beq @not_pressed
+    jsr change_color
+@not_pressed:
     jmp loop
 
 
+change_color:
+    lda #%00000010
+    sta $023A
+    rts
 
-; TODO: make functions for sprite and patterntable drawing
-;       arguments: low byte, hight byte, size, X, Y
+; At the same time that we strobe bit 0, we initialize the ring counter
+; so we're hitting two birds with one stone here
+readjoy:
+    lda #$01
+    ; While the strobe bit is set, buttons will be continuously reloaded.
+    ; This means that reading from JOYPAD1 will only return the state of the
+    ; first button: button A.
+    sta JOYPAD1
+    sta buttons
+    lsr a        ; now A is 0
+    ; By storing 0 into JOYPAD1, the strobe bit is cleared and the reloading stops.
+    ; This allows all 8 buttons (newly reloaded) to be read from JOYPAD1.
+    sta JOYPAD1
+@loop:
+    lda JOYPAD1
+    lsr a	       ; bit 0 -> Carry
+    rol buttons  ; Carry -> bit 0; bit 7 -> Carry
+    bcc @loop
+    rts
 
 sdata:
         ; X    №    a    Y
