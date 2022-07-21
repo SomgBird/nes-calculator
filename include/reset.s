@@ -46,10 +46,3 @@ reset:
     sta PPU_PPUADDR ; write the least significant byte
 
     rti
-
-nmi:
-    lda #$00
-    sta PPU_OAMADDR ; set the low byte of RAM
-    lda #$02        ; set the high byte of RAM, and transfer
-    sta PPU_OAMDMA
-    rti

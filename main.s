@@ -1,20 +1,15 @@
 .include "const.inc"
 .include "ines-header.s"
-JOYPAD1 = $4016
-
-BUTTON_A      = 1 << 7
-BUTTON_B      = 1 << 6
-BUTTON_SELECT = 1 << 5
-BUTTON_START  = 1 << 4
-BUTTON_UP     = 1 << 3
-BUTTON_DOWN   = 1 << 2
-BUTTON_LEFT   = 1 << 1
-BUTTON_RIGHT  = 1 << 0
 
 .segment "ZEROPAGE"
 addrL:  .res 1
 addrH:  .res 1
-buttons: .res 1
+pressed_buttons: .res 1
+released_buttons: .res 1
+cursorX: .res 1, $00
+cursorY: .res 1, $00
+cursorParamsAddrL: .res 1
+cursorParamsAddrH: .res 1
 
 .segment "CODE"
 .include "reset.s"
@@ -38,7 +33,7 @@ sprite_load:
     ldx #$00
 @loop:
     lda sdata, X
-    sta $0200, X
+    sta SPRITE_ADDR, X
     inx
     cpx #$74
     bne @loop
@@ -87,27 +82,104 @@ load_nametable:
     sta PPU_SCROLL
     sta PPU_SCROLL
 
-loop:
-    ; TEST INPUT
-reread:
-    lda buttons
+forever:
+    jmp forever
+
+nmi:
+    lda #$00
+    sta PPU_OAMADDR ; set the low byte of RAM
+    lda #$02        ; set the high byte of RAM, and transfer
+    sta PPU_OAMDMA
+
+    jsr change_sprite_params    ; update first selected button
+@reread:
+    ; read input
+    lda pressed_buttons
     pha
     jsr readjoy
     pla
-    cmp buttons
-    bne reread
+    cmp pressed_buttons
+    bne @reread
 
-    lda buttons
+    ; handle imput
+
+    ; is UP pressed?
+@read_up:
+    lda pressed_buttons
+    and #BUTTON_UP
+    beq @read_up_done
+    ldx #Y_MIN_KEY
+    cpx cursorY
+    beq input_handled
+    dec cursorY
+    jsr change_sprite_params
+@read_up_done:
+
+@read_down:
+    ; is DOWN pressed?
+    lda pressed_buttons
+    and #BUTTON_DOWN
+    beq @read_down_done
+    ldx #Y_MAX_KEY
+    cpx cursorY
+    beq input_handled
+    inc cursorY
+    jsr change_sprite_params
+@read_down_done:
+
+@read_left:
+    ; is LEFT pressed?
+    lda pressed_buttons
+    and #BUTTON_LEFT
+    beq @read_left_done
+    ldx #X_MIN_KEY
+    cpx cursorX
+    beq input_handled
+    dec cursorX
+    jsr change_sprite_params
+@read_left_done:
+
+@read_right:
+    ; is RIGHT pressed?
+    lda pressed_buttons
     and #BUTTON_RIGHT
-    beq @not_pressed
-    jsr change_color
-@not_pressed:
-    jmp loop
+    beq @read_right_done
+    ldx #X_MAX_KEY
+    cpx cursorX
+    beq input_handled
+    inc cursorX
+    jsr change_sprite_params
+@read_right_done:
 
+input_handled:
+    rti
 
-change_color:
-    lda #%00000010
-    sta $023A
+change_sprite_params:
+    ; Changes sprite's palette.
+
+    ; compute sprite shift
+    lda #$00    ; shift
+    ldy #$00    ; counter
+    @loop:
+    cpy cursorY
+    beq @end_loop
+    adc #X_KEYS_SIZE
+    iny
+    jmp @loop
+    @end_loop:
+    clc
+    adc cursorX
+
+    ; compute sprite address
+    clc
+    asl
+    asl
+    adc #$03
+
+    ; update sprite params
+    tax
+    lda #CURSOR_PALETTE
+    sta KEYS_SPRITE_ADDR, X
     rts
 
 ; At the same time that we strobe bit 0, we initialize the ring counter
@@ -118,7 +190,7 @@ readjoy:
     ; This means that reading from JOYPAD1 will only return the state of the
     ; first button: button A.
     sta JOYPAD1
-    sta buttons
+    sta pressed_buttons
     lsr a        ; now A is 0
     ; By storing 0 into JOYPAD1, the strobe bit is cleared and the reloading stops.
     ; This allows all 8 buttons (newly reloaded) to be read from JOYPAD1.
@@ -126,12 +198,12 @@ readjoy:
 @loop:
     lda JOYPAD1
     lsr a	       ; bit 0 -> Carry
-    rol buttons  ; Carry -> bit 0; bit 7 -> Carry
+    rol pressed_buttons  ; Carry -> bit 0; bit 7 -> Carry
     bcc @loop
     rts
 
 sdata:
-        ; X    №    a    Y
+        ; Y    №    a    X
     .byte $1B, $0A, $00, $10    ; NNN+NNN
     .byte $1B, $0A, $00, $18
     .byte $1B, $0A, $00, $20
