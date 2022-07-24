@@ -4,12 +4,13 @@
 .segment "ZEROPAGE"
 addrL:  .res 1
 addrH:  .res 1
+buttons: .res 1
 pressed_buttons: .res 1
 released_buttons: .res 1
+last_frame_buttons: .res 1
 cursorX: .res 1, $00
 cursorY: .res 1, $00
-cursorParamsAddrL: .res 1
-cursorParamsAddrH: .res 1
+palette: .res 1
 
 .segment "CODE"
 .include "reset.s"
@@ -82,6 +83,11 @@ load_nametable:
     sta PPU_SCROLL
     sta PPU_SCROLL
 
+    lda #CURSOR_PALETTE
+    sta palette
+    jsr change_sprite_params    ; update first selected button
+
+
 forever:
     jmp forever
 
@@ -91,28 +97,47 @@ nmi:
     lda #$02        ; set the high byte of RAM, and transfer
     sta PPU_OAMDMA
 
-    jsr change_sprite_params    ; update first selected button
 @reread:
     ; read input
-    lda pressed_buttons
+    lda buttons
     pha
     jsr readjoy
     pla
-    cmp pressed_buttons
+    cmp buttons
     bne @reread
 
-    ; handle imput
+    eor #%11111111
+    and last_frame_buttons
+    sta released_buttons
+    lda last_frame_buttons
+    eor #%11111111
+    and buttons
+    sta pressed_buttons
 
-    ; is UP pressed?
 @read_up:
+    ; is UP pressed?
     lda pressed_buttons
     and #BUTTON_UP
     beq @read_up_done
+
+    ; is this move possible?
     ldx #Y_MIN_KEY
     cpx cursorY
     beq input_handled
+
+    ; reload palette of the previous key
+    lda #DEFAULT_PALETTE
+    sta palette
+    jsr change_sprite_params
+    
+    ; move cursor for the next key
+    lda #CURSOR_PALETTE
+    sta palette
     dec cursorY
     jsr change_sprite_params
+
+    lda #BUTTON_UP
+    sta lastButtonPressed
 @read_up_done:
 
 @read_down:
@@ -120,9 +145,20 @@ nmi:
     lda pressed_buttons
     and #BUTTON_DOWN
     beq @read_down_done
+
+    ; is this move possible?
     ldx #Y_MAX_KEY
     cpx cursorY
     beq input_handled
+
+    ; reload palette of the previous key
+    lda #DEFAULT_PALETTE
+    sta palette
+    jsr change_sprite_params
+
+    ; move cursor for the next key
+    lda #CURSOR_PALETTE
+    sta palette
     inc cursorY
     jsr change_sprite_params
 @read_down_done:
@@ -132,9 +168,20 @@ nmi:
     lda pressed_buttons
     and #BUTTON_LEFT
     beq @read_left_done
+
+    ; is this move possible?
     ldx #X_MIN_KEY
     cpx cursorX
     beq input_handled
+
+    ; reload palette of the previous key
+    lda #DEFAULT_PALETTE
+    sta palette
+    jsr change_sprite_params
+
+    ; move cursor for the next key
+    lda #CURSOR_PALETTE
+    sta palette
     dec cursorX
     jsr change_sprite_params
 @read_left_done:
@@ -144,14 +191,27 @@ nmi:
     lda pressed_buttons
     and #BUTTON_RIGHT
     beq @read_right_done
+
+    ; is this move possible?
     ldx #X_MAX_KEY
     cpx cursorX
     beq input_handled
+
+    ; reload palette of the previous key
+    lda #DEFAULT_PALETTE
+    sta palette
+    jsr change_sprite_params
+
+    ; move cursor for the next key
+    lda #CURSOR_PALETTE
+    sta palette
     inc cursorX
     jsr change_sprite_params
 @read_right_done:
 
 input_handled:
+    lda buttons
+    sta last_frame_buttons
     rti
 
 change_sprite_params:
@@ -178,7 +238,7 @@ change_sprite_params:
 
     ; update sprite params
     tax
-    lda #CURSOR_PALETTE
+    lda palette
     sta KEYS_SPRITE_ADDR, X
     rts
 
@@ -190,7 +250,7 @@ readjoy:
     ; This means that reading from JOYPAD1 will only return the state of the
     ; first button: button A.
     sta JOYPAD1
-    sta pressed_buttons
+    sta buttons
     lsr a        ; now A is 0
     ; By storing 0 into JOYPAD1, the strobe bit is cleared and the reloading stops.
     ; This allows all 8 buttons (newly reloaded) to be read from JOYPAD1.
@@ -198,7 +258,7 @@ readjoy:
 @loop:
     lda JOYPAD1
     lsr a	       ; bit 0 -> Carry
-    rol pressed_buttons  ; Carry -> bit 0; bit 7 -> Carry
+    rol buttons  ; Carry -> bit 0; bit 7 -> Carry
     bcc @loop
     rts
 

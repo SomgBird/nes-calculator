@@ -45,6 +45,7 @@ BUTTON_LEFT   = 1 << 1
 BUTTON_RIGHT  = 1 << 0
 
 ; Misc
+DEFAULT_PALETTE = %00000000
 CURSOR_PALETTE = %00000010  ; Selected key sprite palette will be chancged to this one
 
 KEYS_SPRITE_ADDR = $0237    ; Add where interactive keys sprites begin
