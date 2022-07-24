@@ -135,9 +135,6 @@ nmi:
     sta palette
     dec cursorY
     jsr change_sprite_params
-
-    lda #BUTTON_UP
-    sta lastButtonPressed
 @read_up_done:
 
 @read_down:
