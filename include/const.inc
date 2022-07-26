@@ -48,7 +48,19 @@ BUTTON_RIGHT  = 1 << 0
 DEFAULT_PALETTE = %00000000
 CURSOR_PALETTE = %00000010  ; Selected key sprite palette will be chancged to this one
 
-KEYS_SPRITE_ADDR = $0237    ; Add where interactive keys sprites begin
+KEYS_SPRITE_ADDR = $0200    ; Add where interactive keys sprites begin
+
+
+FIRST_HUNDGREDS_TILE_ADDR = $2062
+FIRST_TENS_TILE_ADDR = $2063
+FIRST_ONES_TILE_ADDR = $2064
+
+SECOND_HUNDGREDS_TILE_ADDR = $2066
+SECOND_TENS_TILE_ADDR = $2067
+SECOND_ONES_TILE_ADDR = $2068
+
+; OPERATION_TILE_ADDR = $2050
+; OUT_NUMBER_TILE_ADDR = $2100
 
 X_KEYS_SIZE = $05           ; Number of key columns
 Y_KEYS_SIZE = $03           ; Number of key rows

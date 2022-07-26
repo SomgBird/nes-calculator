@@ -12,8 +12,38 @@ cursorX: .res 1, $00
 cursorY: .res 1, $00
 palette: .res 1
 
+firstNumberOnes: .res 1, $00
+firstNumberTens: .res 1, $00
+firstNumberHundreds: .res 1, $00
+
+secondsNumberOnes: .res 1, $00
+secondsNumberTens: .res 1, $00
+secondNumberHundreds: .res 1, $00
+
+outNumberOnes: .res 1, $00
+outNumberTens: .res 1, $00
+outNumberHundreds: .res 1, $00
+
+currentNumberTileAddr: .res 2
+
+selection: .res 1
+
+operationFlag: .res 1   ; --SN PMPD
+                        ;   S - selection
+                        ;   N - 0 for first number, 1 for second number
+                        ;   P - plus
+                        ;   M - minus
+                        ;   P - product
+                        ;   D - divide
+numberFlag: .res 1 ; ---- -OTN
+                        ;   O - writing ones
+                        ;   T - writing tens
+                        ;   H - writing hundreds
+
 .segment "CODE"
 .include "reset.s"
+.include "read_input.s"
+.include "update_info_panel.s"
 
 main:
 load_palettes:
@@ -36,7 +66,7 @@ sprite_load:
     lda sdata, X
     sta SPRITE_ADDR, X
     inx
-    cpx #$74
+    cpx #$3C
     bne @loop
 
 load_nametable:
@@ -74,211 +104,40 @@ load_nametable:
 ;     cpx #$10
 ;     bne @loop
 
-    lda #%10000000 ; enable NMI, sprites from Pattern 0, background from Pattern 1
-    sta PPU_CTRL
-    lda #%00011000 ; enable sprites, enable background
-    sta PPU_MASK
-
-    lda #$00
-    sta PPU_SCROLL
-    sta PPU_SCROLL
-
     lda #CURSOR_PALETTE
     sta palette
-    jsr change_sprite_params    ; update first selected button
+    jsr ChangeSpriteParams    ; update first selected button
 
+    lda #%10000000 ; enable NMI, sprites from Pattern 0, background from Pattern 1
+    sta PPU_CTRL
+    lda #%00011110 ; enable sprites, enable background
+    sta PPU_MASK
+
+    lda #%000000100
+    sta numberFlag
+    lda #>FIRST_ONES_TILE_ADDR
+    sta >currentNumberTileAddr
+    lda #<FIRST_ONES_TILE_ADDR
+    sta <currentNumberTileAddr
 
 forever:
     jmp forever
 
+
 nmi:
+    ; standard NMI beginning
     lda #$00
     sta PPU_OAMADDR ; set the low byte of RAM
     lda #$02        ; set the high byte of RAM, and transfer
     sta PPU_OAMDMA
 
-@reread:
-    ; read input
-    lda buttons
-    pha
-    jsr readjoy
-    pla
-    cmp buttons
-    bne @reread
+    jsr ReadInput
+    jsr UpdateInfoPanel
 
-    eor #%11111111
-    and last_frame_buttons
-    sta released_buttons
-    lda last_frame_buttons
-    eor #%11111111
-    and buttons
-    sta pressed_buttons
-
-@read_up:
-    ; is UP pressed?
-    lda pressed_buttons
-    and #BUTTON_UP
-    beq @read_up_done
-
-    ; is this move possible?
-    ldx #Y_MIN_KEY
-    cpx cursorY
-    beq input_handled
-
-    ; reload palette of the previous key
-    lda #DEFAULT_PALETTE
-    sta palette
-    jsr change_sprite_params
-    
-    ; move cursor for the next key
-    lda #CURSOR_PALETTE
-    sta palette
-    dec cursorY
-    jsr change_sprite_params
-@read_up_done:
-
-@read_down:
-    ; is DOWN pressed?
-    lda pressed_buttons
-    and #BUTTON_DOWN
-    beq @read_down_done
-
-    ; is this move possible?
-    ldx #Y_MAX_KEY
-    cpx cursorY
-    beq input_handled
-
-    ; reload palette of the previous key
-    lda #DEFAULT_PALETTE
-    sta palette
-    jsr change_sprite_params
-
-    ; move cursor for the next key
-    lda #CURSOR_PALETTE
-    sta palette
-    inc cursorY
-    jsr change_sprite_params
-@read_down_done:
-
-@read_left:
-    ; is LEFT pressed?
-    lda pressed_buttons
-    and #BUTTON_LEFT
-    beq @read_left_done
-
-    ; is this move possible?
-    ldx #X_MIN_KEY
-    cpx cursorX
-    beq input_handled
-
-    ; reload palette of the previous key
-    lda #DEFAULT_PALETTE
-    sta palette
-    jsr change_sprite_params
-
-    ; move cursor for the next key
-    lda #CURSOR_PALETTE
-    sta palette
-    dec cursorX
-    jsr change_sprite_params
-@read_left_done:
-
-@read_right:
-    ; is RIGHT pressed?
-    lda pressed_buttons
-    and #BUTTON_RIGHT
-    beq @read_right_done
-
-    ; is this move possible?
-    ldx #X_MAX_KEY
-    cpx cursorX
-    beq input_handled
-
-    ; reload palette of the previous key
-    lda #DEFAULT_PALETTE
-    sta palette
-    jsr change_sprite_params
-
-    ; move cursor for the next key
-    lda #CURSOR_PALETTE
-    sta palette
-    inc cursorX
-    jsr change_sprite_params
-@read_right_done:
-
-input_handled:
-    lda buttons
-    sta last_frame_buttons
     rti
-
-change_sprite_params:
-    ; Changes sprite's palette.
-
-    ; compute sprite shift
-    lda #$00    ; shift
-    ldy #$00    ; counter
-    @loop:
-    cpy cursorY
-    beq @end_loop
-    adc #X_KEYS_SIZE
-    iny
-    jmp @loop
-    @end_loop:
-    clc
-    adc cursorX
-
-    ; compute sprite address
-    clc
-    asl
-    asl
-    adc #$03
-
-    ; update sprite params
-    tax
-    lda palette
-    sta KEYS_SPRITE_ADDR, X
-    rts
-
-; At the same time that we strobe bit 0, we initialize the ring counter
-; so we're hitting two birds with one stone here
-readjoy:
-    lda #$01
-    ; While the strobe bit is set, buttons will be continuously reloaded.
-    ; This means that reading from JOYPAD1 will only return the state of the
-    ; first button: button A.
-    sta JOYPAD1
-    sta buttons
-    lsr a        ; now A is 0
-    ; By storing 0 into JOYPAD1, the strobe bit is cleared and the reloading stops.
-    ; This allows all 8 buttons (newly reloaded) to be read from JOYPAD1.
-    sta JOYPAD1
-@loop:
-    lda JOYPAD1
-    lsr a	       ; bit 0 -> Carry
-    rol buttons  ; Carry -> bit 0; bit 7 -> Carry
-    bcc @loop
-    rts
 
 sdata:
         ; Y    №    a    X
-    .byte $1B, $0A, $00, $10    ; NNN+NNN
-    .byte $1B, $0A, $00, $18
-    .byte $1B, $0A, $00, $20
-    .byte $1B, $0C, $00, $28
-    .byte $1B, $0A, $00, $30
-    .byte $1B, $0A, $00, $38
-    .byte $1B, $0A, $00, $40
-
-    .byte $27, $1B, $00, $10    ; OUT:NNN
-    .byte $27, $1C, $00, $18
-    .byte $27, $1D, $00, $20
-    .byte $27, $1E, $00, $28
-    .byte $27, $0A, $00, $30
-    .byte $27, $0A, $00, $38
-    .byte $27, $0A, $00, $40
-    
-    ; 33 empty
-
     .byte $3F, $07, $00, $18    ; 789 0=
     .byte $3F, $08, $00, $20
     .byte $3F, $09, $00, $28
@@ -308,6 +167,11 @@ nametable:
 ;     .byte %00000000,%00000000,%00000000, %00000000, %00000000, %00000000, %00000000,%00000000
 ;     .byte %00000000,%00000000,%00000000, %00000000, %00000000, %00000000, %00000000,%00000000
     
+keymap:
+    .byte $07, $08, $09, $0A, $0B   ; 789 0=
+    .byte $04, $05, $06, $0C, $0D   ; 456 +-
+    .byte $01, $02, $03, $0E, $0F   ; 123 */
+
 .segment "OAM"
 
 .segment "VECTORS"
