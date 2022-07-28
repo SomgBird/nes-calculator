@@ -1,47 +1,30 @@
-.proc ReadInput
-    @reread:
-    ; read input
-    lda buttons
-    pha
-    jsr ReadJoy
-    pla
-    cmp buttons
-    bne @reread
-
-    eor #%11111111
-    and last_frame_buttons
-    sta released_buttons
-    lda last_frame_buttons
-    eor #%11111111
-    and buttons
-    sta pressed_buttons
-
+.proc HandleInput
 @read_select:
     ; is SELECT pressed?
-    lda pressed_buttons
+    lda pressedButtons
     and #BUTTON_SELECT
     beq @read_select_done
     
     lda #$00    ; shift
     ldy #$00    ; counter
-    @loop:
+@loop:
     cpy cursorY
     beq @end_loop
     adc #X_KEYS_SIZE
     iny
     jmp @loop
-    @end_loop:
+@end_loop:
     clc
     adc cursorX
 
     sta selection
-    lda #%00100000
+    lda #OP_SELECTION
     sta operationFlag
 @read_select_done:
 
 @read_up:
     ; is UP pressed?
-    lda pressed_buttons
+    lda pressedButtons
     and #BUTTON_UP
     beq @read_up_done
 
@@ -64,7 +47,7 @@
 
 @read_down:
     ; is DOWN pressed?
-    lda pressed_buttons
+    lda pressedButtons
     and #BUTTON_DOWN
     beq @read_down_done
 
@@ -87,7 +70,7 @@
 
 @read_left:
     ; is LEFT pressed?
-    lda pressed_buttons
+    lda pressedButtons
     and #BUTTON_LEFT
     beq @read_left_done
 
@@ -110,7 +93,7 @@
 
 @read_right:
     ; is RIGHT pressed?
-    lda pressed_buttons
+    lda pressedButtons
     and #BUTTON_RIGHT
     beq @read_right_done
 
@@ -132,10 +115,33 @@
 @read_right_done:
 
 input_handled:
-    lda buttons
-    sta last_frame_buttons
     rts
 .endproc
+
+
+.proc UpdateInput
+    lda buttons
+    sta lastFrameButtons
+@reread:
+    ; read input
+    lda buttons
+    pha
+    jsr ReadJoy
+    pla
+    cmp buttons
+    bne @reread
+
+    eor #%11111111
+    and lastFrameButtons
+    sta releasedButtons
+    lda lastFrameButtons
+    eor #%11111111
+    and buttons
+    sta pressedButtons
+
+    rts
+.endproc
+
 
 .proc ReadJoy
 ; At the same time that we strobe bit 0, we initialize the ring counter
@@ -159,19 +165,20 @@ readjoy:
     rts
 .endproc
 
+
 .proc ChangeSpriteParams
     ; Changes sprite's palette.
 
     ; compute sprite shift
     lda #$00    ; shift
     ldy #$00    ; counter
-    @loop:
+@loop:
     cpy cursorY
     beq @end_loop
     adc #X_KEYS_SIZE
     iny
     jmp @loop
-    @end_loop:
+@end_loop:
     clc
     adc cursorX
 

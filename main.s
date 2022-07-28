@@ -5,30 +5,33 @@
 addrL:  .res 1
 addrH:  .res 1
 buttons: .res 1
-pressed_buttons: .res 1
-released_buttons: .res 1
-last_frame_buttons: .res 1
+pressedButtons: .res 1
+releasedButtons: .res 1
+lastFrameButtons: .res 1
 cursorX: .res 1, $00
 cursorY: .res 1, $00
 palette: .res 1
 
-firstNumberOnes: .res 1, $00
-firstNumberTens: .res 1, $00
 firstNumberHundreds: .res 1, $00
+firstNumberTens: .res 1, $00
+firstNumberOnes: .res 1, $00
 
-secondsNumberOnes: .res 1, $00
-secondsNumberTens: .res 1, $00
 secondNumberHundreds: .res 1, $00
+secondsNumberTens: .res 1, $00
+secondsNumberOnes: .res 1, $00
 
 outNumberOnes: .res 1, $00
 outNumberTens: .res 1, $00
 outNumberHundreds: .res 1, $00
 
+currentNumberMemoryAddr: .res 1
 currentNumberTileAddr: .res 2
+tmpPtr: .res 2 
 
 selection: .res 1
 
-operationFlag: .res 1   ; --SN PMPD
+operationFlag: .res 1   ; -ESN PMPD
+                        ;   E - equals (show result)
                         ;   S - selection
                         ;   N - 0 for first number, 1 for second number
                         ;   P - plus
@@ -120,6 +123,9 @@ load_nametable:
     lda #<FIRST_ONES_TILE_ADDR
     sta <currentNumberTileAddr
 
+    lda #firstNumberOnes
+    sta currentNumberMemoryAddr
+
 forever:
     jmp forever
 
@@ -131,8 +137,18 @@ nmi:
     lda #$02        ; set the high byte of RAM, and transfer
     sta PPU_OAMDMA
 
-    jsr ReadInput
-    jsr UpdateInfoPanel
+    jsr UpdateInput
+    jsr HandleInput
+    jsr UpdateNumbers
+    
+    lda #%10000000 ; enable NMI, sprites from Pattern 0, background from Pattern 1
+    sta PPU_CTRL
+    lda #%00011110 ; enable sprites, enable background
+    sta PPU_MASK
+
+    lda #$00
+    sta PPU_SCROLL
+    sta PPU_SCROLL
 
     rti
 

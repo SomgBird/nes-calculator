@@ -44,6 +44,15 @@ BUTTON_DOWN   = 1 << 2
 BUTTON_LEFT   = 1 << 1
 BUTTON_RIGHT  = 1 << 0
 
+; Operations' flags
+OP_EQUALS       = 1 << 6
+OP_SELECTION    = 1 << 5
+OP_NUMBER       = 1 << 4
+OP_PLUS         = 1 << 3
+OP_MINUS        = 1 << 2
+OP_PRODUCT      = 1 << 1
+OP_DIVIDE       = 1 << 0
+
 ; Misc
 DEFAULT_PALETTE = %00000000
 CURSOR_PALETTE = %00000010  ; Selected key sprite palette will be chancged to this one
