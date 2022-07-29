@@ -45,9 +45,6 @@ BUTTON_LEFT   = 1 << 1
 BUTTON_RIGHT  = 1 << 0
 
 ; Operations' flags
-OP_EQUALS       = 1 << 6
-OP_SELECTION    = 1 << 5
-OP_NUMBER       = 1 << 4
 OP_PLUS         = 1 << 3
 OP_MINUS        = 1 << 2
 OP_PRODUCT      = 1 << 1
@@ -68,7 +65,7 @@ SECOND_HUNDGREDS_TILE_ADDR = $2066
 SECOND_TENS_TILE_ADDR = $2067
 SECOND_ONES_TILE_ADDR = $2068
 
-; OPERATION_TILE_ADDR = $2050
+OPERATION_TILE_ADDR = $2065
 ; OUT_NUMBER_TILE_ADDR = $2100
 
 X_KEYS_SIZE = $05           ; Number of key columns

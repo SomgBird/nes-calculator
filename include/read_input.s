@@ -18,8 +18,8 @@
     adc cursorX
 
     sta selection
-    lda #OP_SELECTION
-    sta operationFlag
+    lda #$01
+    sta selectionFlag
 @read_select_done:
 
 @read_up:
