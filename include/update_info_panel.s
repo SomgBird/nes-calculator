@@ -1,3 +1,5 @@
+.include "mptr.s"
+
 .proc UpdateNumbers
     lda #$01
     bit selectionFlag
@@ -73,8 +75,6 @@
     jsr LoadTilePtr
     jmp @next_number
 
-
-
 @handle_equals:
     ; TODO: apply operation
 
@@ -94,21 +94,25 @@
 @handle_plus:
     ; update operation sign
     jsr UpdateOperationTile
+    jsr SwitchOperand
     jmp @selection_done
 
 @handle_minus:
     ; update operation sign
     jsr UpdateOperationTile
+    jsr SwitchOperand
     jmp @selection_done
 
 @handle_product:
     ; update operation sign
     jsr UpdateOperationTile
+    jsr SwitchOperand
     jmp @selection_done
 
 @handle_divide:
     ; update operation sign
     jsr UpdateOperationTile
+    jsr SwitchOperand
     jmp @selection_done
 
 @next_number:
@@ -117,63 +121,5 @@
     lda #$00
     sta selectionFlag
 @no_select:
-    rts
-.endproc
-
-
-.proc SwitchOperand
-
-.endproc
-
-
-.proc ParseKeymap
-    ldx selection
-    lda keymap, X
-    rts
-.endproc
-
-.proc UpdateOperationTile
-    lda #>OPERATION_TILE_ADDR
-    sta PPU_PPUADDR
-    lda #<OPERATION_TILE_ADDR
-    sta PPU_PPUADDR
-    lda selection
-    jsr ParseKeymap
-    sta PPU_PPUDATA
-    rts
-.endproc
-
-.proc LoadTilePtr
-    lda <tmpPtr-0
-    sta <currentNumberTileAddr
-    lda >tmpPtr-0
-    sta >currentNumberTileAddr
-    rts
-.endproc
-
-
-.proc SaveTilePtr
-    lda <currentNumberTileAddr-0
-    sta <tmpPtr
-    lda >currentNumberTileAddr-0
-    sta >tmpPtr
-    rts
-.endproc
-
-
-.proc IncPtr
-    inc tmpPtr
-    bne @skip
-    inc tmpPtr+1
-@skip:
-    rts
-.endproc
-
-
-.proc DecPtr
-    dec tmpPtr
-    bne @skip
-    dec tmpPtr+1
-@skip:
     rts
 .endproc

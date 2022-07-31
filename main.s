@@ -17,8 +17,8 @@ firstOpTens: .res 1, $00
 firstOpOnes: .res 1, $00
 
 secondOpHundreds: .res 1, $00
-secondsOpTens: .res 1, $00
-secondsOpOnes: .res 1, $00
+secondOpTens: .res 1, $00
+secondOpOnes: .res 1, $00
 
 outHundreds: .res 1, $00
 outTens: .res 1, $00
@@ -31,6 +31,7 @@ tmpPtr: .res 2
 selection: .res 1, $00
 selectionFlag: .res 1, $00
 
+operandFlag: .res 1, $00
 operationFlag: .res 1   ; ---- PMPD
                         ;   P - plus
                         ;   M - minus
@@ -42,6 +43,7 @@ numberFlag: .res 1 ; ---- -OTN
                         ;   H - writing hundreds
 
 .segment "CODE"
+.MACPACK longbranch
 .include "reset.s"
 .include "read_input.s"
 .include "update_info_panel.s"
