@@ -77,7 +77,7 @@
 
 @handle_equals:
     ; TODO: apply operation
-
+    jsr ApplyOperation
     ; reset pointers and flags
     lda #<FIRST_ONES_TILE_ADDR
     sta <currentNumberTileAddr
@@ -93,33 +93,85 @@
 
 @handle_plus:
     ; update operation sign
-    jsr UpdateOperationTile
-    jsr SwitchOperand
-    jmp @selection_done
+    lda #OP_PLUS
+    jmp @operation_update
 
 @handle_minus:
     ; update operation sign
-    jsr UpdateOperationTile
-    jsr SwitchOperand
-    jmp @selection_done
+    lda #OP_MINUS
+    jmp @operation_update
 
 @handle_product:
     ; update operation sign
-    jsr UpdateOperationTile
-    jsr SwitchOperand
-    jmp @selection_done
+    lda #OP_PRODUCT
+    jmp @operation_update
 
 @handle_divide:
     ; update operation sign
+    lda #OP_DIVIDE
+    jmp @operation_update
+
+
+@operation_update:
+    sta operationFlag
     jsr UpdateOperationTile
     jsr SwitchOperand
     jmp @selection_done
-
 @next_number:
     lsr numberFlag
 @selection_done:
     lda #$00
     sta selectionFlag
 @no_select:
+    rts
+.endproc
+
+
+.proc SwitchOperand
+@switch1:
+    lda #$00
+    cmp operandFlag
+    jne @switch0
+    lda #$01
+    sta operandFlag
+    lda #<SECOND_ONES_TILE_ADDR
+    sta <currentNumberTileAddr
+    lda #>SECOND_ONES_TILE_ADDR
+    sta >currentNumberTileAddr
+    lda #secondOpOnes
+    sta currentNumberMemoryAddr
+    jmp @end
+
+@switch0:
+    sta operandFlag
+    lda #<FIRST_ONES_TILE_ADDR
+    sta <currentNumberTileAddr
+    lda #>FIRST_ONES_TILE_ADDR
+    sta >currentNumberTileAddr
+    lda #firstOpOnes
+    sta currentNumberMemoryAddr
+
+@end:
+    lda #$04
+    sta numberFlag
+    rts
+.endproc
+
+
+.proc ParseKeymap
+    ldx selection
+    lda keymap, X
+    rts
+.endproc
+
+
+.proc UpdateOperationTile
+    lda #>OPERATION_TILE_ADDR
+    sta PPU_PPUADDR
+    lda #<OPERATION_TILE_ADDR
+    sta PPU_PPUADDR
+    lda selection
+    jsr ParseKeymap
+    sta PPU_PPUDATA
     rts
 .endproc

@@ -66,7 +66,7 @@ SECOND_TENS_TILE_ADDR = $2067
 SECOND_ONES_TILE_ADDR = $2068
 
 OPERATION_TILE_ADDR = $2065
-; OUT_NUMBER_TILE_ADDR = $2100
+OUT_NUMBER_TILE_ADDR = $2086
 
 X_KEYS_SIZE = $05           ; Number of key columns
 Y_KEYS_SIZE = $03           ; Number of key rows

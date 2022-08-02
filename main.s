@@ -47,6 +47,7 @@ numberFlag: .res 1 ; ---- -OTN
 .include "reset.s"
 .include "read_input.s"
 .include "update_info_panel.s"
+.include "operations.s"
 
 main:
 load_palettes:
@@ -126,7 +127,7 @@ load_nametable:
     lda #firstOpOnes
     sta currentNumberMemoryAddr
 
-    lda #$08
+    lda #OP_PLUS
     sta operationFlag
 
 forever:
